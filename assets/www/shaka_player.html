@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Shaka Player - DRM Video Example</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/shaka-player/4.3.2/shaka-player.compiled.js"></script>
+</head>
+<body>
+  <div style="text-align: center; margin-top: 50px;">
+    <h1>Shaka Player - DRM Video Example</h1>
+    <p>Widevine DRM-protected video playback</p>
+
+    <!-- Video Player -->
+    <video id="video" width="640" controls autoplay style="border: 1px solid #ccc;"></video>
+
+    <!-- Error Log -->
+    <div id="error-log" style="margin-top: 20px; color: red;"></div>
+  </div>
+
+  <script>
+    const manifestUri = 'https://d2xt71uuz213d8.cloudfront.net/transcoded/BRE5UUzHhxe/video.mpd'; // Replace with your HLS manifest URL
+
+    async function initApp() {
+      // Install polyfills for browser compatibility
+      shaka.polyfill.installAll();
+
+      // Check if the browser supports Shaka Player
+      if (shaka.Player.isBrowserSupported()) {
+        initPlayer();
+      } else {
+        logError('Browser does not support Shaka Player!');
+      }
+    }
+
+    async function initPlayer() {
+      const video = document.getElementById('video'); // Video element
+      const player = new shaka.Player(video); // Initialize Shaka Player
+
+      // Attach the player instance to the window for debugging
+      window.player = player;
+
+      // Widevine DRM Configuration
+      player.configure({
+        drm: {
+          servers: {
+            'com.widevine.alpha': 'https://app.tpstreams.com/api/v1/mxkk6h/assets/BRE5UUzHhxe/drm_license/?access_token=116d54ee-f940-4901-bc82-a5a691527be4&drm_type=widevine' // Replace with your Widevine license server URL
+            // https://app.tpstreams.com/embed/mxkk6h/BRE5UUzHhxe/?access_token=116d54ee-f940-4901-bc82-a5a691527be4
+          }
+        }
+      });
+
+      // Register request filter to add Content-Type header for DRM license requests
+      player.getNetworkingEngine().registerRequestFilter((type, request) => {
+        if (type === shaka.net.NetworkingEngine.RequestType.LICENSE) {
+          request.headers['Content-Type'] = 'application/octet-stream';
+        }
+      });
+
+      // Load the video manifest (HLS or DASH)
+      try {
+        await player.load(manifestUri);
+        console.log('The video has now been loaded!');
+      } catch (error) {
+        onError(error);
+      }
+    }
+
+    function onError(error) {
+      console.error('Error loading video:', error);
+      logError(`Error code ${error.code}: ${error.message}`);
+    }
+
+    function logError(message) {
+      const errorLog = document.getElementById('error-log');
+      errorLog.textContent = message;
+    }
+
+    // Initialize Shaka Player when the DOM content is fully loaded
+    document.addEventListener('DOMContentLoaded', initApp);
+  </script>
+</body>
+</html>
